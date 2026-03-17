@@ -148,6 +148,14 @@ Open `reports/test_report.html` in any browser to see:
 
 ---
 
+## 📊 Test Execution Report
+
+The framework generates detailed HTML reports using pytest-html.
+
+### Sample Report Output:
+
+![Test Report](assets/report.png)
+
 ## ✅ Test Coverage
 
 | Module | Test ID | Scenario | Type |
