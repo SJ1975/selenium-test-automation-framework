@@ -1,0 +1,60 @@
+name: Selenium Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Nightly regression run at midnight UTC
+    - cron: '0 0 * * *'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Get the code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Set up Python
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # 3. Install Chrome
+      - name: Set up Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      # 4. Install Python dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 5. Create reports directory (tests write screenshots here)
+      - name: Create reports directory
+        run: mkdir -p reports/screenshots
+
+      # 6. Run the full test suite
+      #    CI=true is detected by conftest.py → headless mode is enabled
+      - name: Run tests
+        env:
+          CI: true
+        run: |
+          pytest -v \
+            --html=reports/test_report.html \
+            --self-contained-html \
+            --tb=short
+
+      # 7. Upload HTML report + screenshots as a downloadable artifact
+      #    'if: always()' ensures upload even when tests fail
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-report-${{ github.run_number }}
+          path: reports/
+          retention-days: 30

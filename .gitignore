@@ -1,0 +1,31 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# PyTest cache
+.pytest_cache/
+
+# Generated reports (don't commit — regenerate on each run)
+reports/test_report.html
+reports/test_run.log
+reports/screenshots/
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Webdriver manager cache (auto-downloaded, no need to commit)
+.wdm/

@@ -1,0 +1,3 @@
+# This file keeps the reports/ folder tracked by Git.
+# Actual report files (HTML, logs, screenshots) are in .gitignore
+# and are generated fresh on every test run.
