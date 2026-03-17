@@ -10,24 +10,17 @@ from utils.config import Config
 
 class InventoryPage(BasePage):
 
-    # ── Locators ──────────────────────────────────────────────────────
     INVENTORY_CONTAINER    = (By.ID, "inventory_container")
     PAGE_TITLE             = (By.CLASS_NAME, "title")
     INVENTORY_ITEMS        = (By.CLASS_NAME, "inventory_item")
-
     CART_ICON              = (By.CLASS_NAME, "shopping_cart_link")
     CART_BADGE             = (By.CLASS_NAME, "shopping_cart_badge")
-
     ADD_TO_CART_BACKPACK   = (By.CSS_SELECTOR, "[data-test='add-to-cart-sauce-labs-backpack']")
     REMOVE_BACKPACK        = (By.CSS_SELECTOR, "[data-test='remove-sauce-labs-backpack']")
-
     ADD_TO_CART_BIKE_LIGHT = (By.CSS_SELECTOR, "[data-test='add-to-cart-sauce-labs-bike-light']")
     REMOVE_BIKE_LIGHT      = (By.CSS_SELECTOR, "[data-test='remove-sauce-labs-bike-light']")
-
     MENU_BUTTON            = (By.ID, "react-burger-menu-btn")
     LOGOUT_LINK            = (By.ID, "logout_sidebar_link")
-
-    # ── Verification ──────────────────────────────────────────────────
 
     def is_loaded(self) -> bool:
         return self.is_element_visible(self.INVENTORY_CONTAINER)
@@ -38,71 +31,71 @@ class InventoryPage(BasePage):
     def get_product_count(self) -> int:
         return len(self.driver.find_elements(*self.INVENTORY_ITEMS))
 
-    # ── Cart badge ────────────────────────────────────────────────────
-
     def get_cart_count(self) -> int:
         """
-        Return the number on the cart badge, or 0 if badge is absent.
-
-        Uses the full EXPLICIT_WAIT (10s) so slow network/page responses
-        don't cause false 0 readings.
-        Badge absent = cart is empty = 0.
+        Return the badge count or 0 if badge is absent.
+        Short 3-second wait — badge appears fast or not at all.
         """
         try:
-            badge = WebDriverWait(self.driver, Config.EXPLICIT_WAIT).until(
+            badge = WebDriverWait(self.driver, 3).until(
                 EC.visibility_of_element_located(self.CART_BADGE)
             )
             return int(badge.text)
         except TimeoutException:
             return 0
 
-    # ── Cart actions ──────────────────────────────────────────────────
+    # ── The key fix — staleness_of ────────────────────────────────────
+    #
+    # WHAT staleness_of does:
+    # You grab a reference to the button element BEFORE clicking it.
+    # After the click, React removes that exact element from the DOM
+    # and inserts a new one. staleness_of detects the moment that
+    # specific element reference is no longer attached to the DOM.
+    #
+    # WHY this beats every other wait:
+    #
+    #   invisibility_of_element_located  — searches DOM by locator,
+    #     can match wrong elements, fails if element is hidden not removed
+    #
+    #   element_to_be_clickable          — requires full interactivity,
+    #     race condition between "present" and "enabled"
+    #
+    #   staleness_of                     — watches the exact object you
+    #     clicked, fires the instant React removes it. No ambiguity,
+    #     no re-search, no race condition. Most reliable for React.
 
     def add_backpack_to_cart(self):
-        """
-        Click 'Add to cart' for Backpack and WAIT for the button to
-        change to 'Remove' before returning.
-
-        WHY the wait matters:
-        Saucedemo updates the cart via JavaScript. The click fires
-        instantly, but the DOM swap (Add -> Remove) and the badge
-        update happen a few milliseconds later.
-        If we read get_cart_count() before the JS finishes, we get
-        the OLD value (0). Waiting for the Remove button to appear
-        proves the JS has completed — the badge is now accurate.
-        """
-        self.click(self.ADD_TO_CART_BACKPACK)
-        # Wait for button to swap to Remove = JS has finished
-        self.wait_for_element(self.REMOVE_BACKPACK)
+        btn = self.wait_for_clickable(self.ADD_TO_CART_BACKPACK)
+        btn.click()
+        # Wait for THIS exact element to be removed from the DOM
+        WebDriverWait(self.driver, Config.EXPLICIT_WAIT).until(
+            EC.staleness_of(btn)
+        )
 
     def remove_backpack_from_cart(self):
-        """
-        Click 'Remove' for Backpack and WAIT for the button to change
-        back to 'Add to cart' before returning.
-
-        Same reason as above — we wait for the DOM to reflect the
-        removal before any caller reads the badge count.
-        """
-        self.click(self.REMOVE_BACKPACK)
-        # Wait for button to swap back to Add to cart = JS has finished
-        self.wait_for_element(self.ADD_TO_CART_BACKPACK)
+        btn = self.wait_for_clickable(self.REMOVE_BACKPACK)
+        btn.click()
+        WebDriverWait(self.driver, Config.EXPLICIT_WAIT).until(
+            EC.staleness_of(btn)
+        )
 
     def add_bike_light_to_cart(self):
-        """Click 'Add to cart' for Bike Light and wait for button swap."""
-        self.click(self.ADD_TO_CART_BIKE_LIGHT)
-        self.wait_for_element(self.REMOVE_BIKE_LIGHT)
+        btn = self.wait_for_clickable(self.ADD_TO_CART_BIKE_LIGHT)
+        btn.click()
+        WebDriverWait(self.driver, Config.EXPLICIT_WAIT).until(
+            EC.staleness_of(btn)
+        )
 
     def remove_bike_light_from_cart(self):
-        """Click 'Remove' for Bike Light and wait for button swap."""
-        self.click(self.REMOVE_BIKE_LIGHT)
-        self.wait_for_element(self.ADD_TO_CART_BIKE_LIGHT)
+        btn = self.wait_for_clickable(self.REMOVE_BIKE_LIGHT)
+        btn.click()
+        WebDriverWait(self.driver, Config.EXPLICIT_WAIT).until(
+            EC.staleness_of(btn)
+        )
 
     def is_remove_button_visible(self, product: str = "backpack") -> bool:
-        """True if Remove button is visible (item is in cart)."""
         locator = self.REMOVE_BACKPACK if product == "backpack" else self.REMOVE_BIKE_LIGHT
         return self.is_element_visible(locator)
-
-    # ── Navigation ────────────────────────────────────────────────────
 
     def go_to_cart(self):
         self.click(self.CART_ICON)
