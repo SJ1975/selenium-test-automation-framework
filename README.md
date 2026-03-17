@@ -8,6 +8,8 @@ a publicly available e-commerce demo site used for QA practice.
 
 ---
 
+[![Selenium Test Suite](https://github.com/SJ1975/selenium-test-automation-framework/actions/workflows/test.yml/badge.svg)](https://github.com/SJ1975/selenium-test-automation-framework/actions/workflows/test.yml)
+
 ## 📋 Table of Contents
 
 - [Tech Stack](#tech-stack)
