@@ -1,20 +1,4 @@
 # conftest.py
-"""
-PyTest Shared Fixtures
-======================
-conftest.py is automatically loaded by PyTest before any tests run.
-Fixtures defined here are available to EVERY test file in the project
-without any import statement.
-
-Two fixtures are provided:
-
-  driver           → fresh browser for each test (use in login tests)
-  logged_in_driver → already authenticated browser  (use in cart / checkout tests)
-
-The 'yield' keyword splits each fixture into:
-  - Everything BEFORE yield  = setup   (runs before the test)
-  - Everything AFTER  yield  = teardown (runs after the test, even on failure)
-"""
 
 import os
 import logging
@@ -23,7 +7,10 @@ from datetime import datetime
 from utils.driver_setup import get_driver, quit_driver
 from utils.config import Config
 
-# ── Logging ──────────────────────────────────────────────────────────────────
+# ── Logging setup ─────────────────────────────────────────────────────────────
+# encoding="utf-8" on FileHandler prevents UnicodeEncodeError on Windows.
+# The terminal stream uses errors="replace" so unknown chars print as ?
+# instead of crashing the entire test run.
 os.makedirs("reports", exist_ok=True)
 
 logging.basicConfig(
@@ -32,9 +19,17 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler("reports/test_run.log", mode="w"),
+        logging.FileHandler("reports/test_run.log", mode="w", encoding="utf-8"),
     ],
 )
+
+# Force the console stream to replace unencodable chars instead of crashing
+for handler in logging.root.handlers:
+    if isinstance(handler, logging.StreamHandler) and not isinstance(
+        handler, logging.FileHandler
+    ):
+        handler.stream.reconfigure(errors="replace")
+
 logger = logging.getLogger(__name__)
 
 
@@ -43,21 +38,15 @@ logger = logging.getLogger(__name__)
 @pytest.fixture(scope="function")
 def driver():
     """
-    Provide a fresh, unauthenticated browser for each test.
-
-    scope="function" means a new browser is started before every test
-    and closed after it.  Tests are fully isolated — one test's actions
-    cannot affect another.
-
-    headless mode: set to True when the CI environment variable is present
-    so the same code runs locally (visible) and in GitHub Actions (headless).
+    Fresh unauthenticated browser for each test.
+    scope="function" = new browser per test = full isolation.
     """
     is_ci = os.getenv("CI", "false").lower() == "true"
     web_driver = get_driver(headless=is_ci)
     web_driver.get(Config.BASE_URL)
-    logger.info("Browser opened → %s", Config.BASE_URL)
+    logger.info("Browser opened -> %s", Config.BASE_URL)
 
-    yield web_driver  # ← test runs here
+    yield web_driver
 
     logger.info("Closing browser")
     quit_driver(web_driver)
@@ -68,15 +57,8 @@ def driver():
 @pytest.fixture(scope="function")
 def logged_in_driver(driver):
     """
-    Provide a browser that is already logged in as standard_user.
-
-    Reuses the 'driver' fixture and performs login on top of it.
-    Cart and checkout tests start from the inventory page — they should
-    not repeat login logic in every test.  Using this fixture keeps
-    each test focused on its own module.
-
-    The driver fixture handles browser teardown, so no extra cleanup
-    is needed here.
+    Browser already logged in as standard_user.
+    Cart and checkout tests use this so they don't repeat login logic.
     """
     from pages.login_page import LoginPage
 
@@ -84,7 +66,7 @@ def logged_in_driver(driver):
     login.login(Config.STANDARD_USER, Config.PASSWORD)
     logger.info("Logged in as '%s'", Config.STANDARD_USER)
 
-    yield driver  # ← test runs here (browser is on /inventory.html)
+    yield driver
 
 
 # ── Screenshot on failure hook ────────────────────────────────────────────────
@@ -92,19 +74,12 @@ def logged_in_driver(driver):
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     """
-    Automatically capture a screenshot when any test fails.
-
-    pytest hooks let you plug into PyTest's lifecycle.
-    hookwrapper=True means we wrap around the normal report creation
-    so we can inspect its outcome.
-
-    Screenshots are saved to reports/screenshots/<testname>_<timestamp>.png
-    and are attached to the HTML report automatically.
+    Capture a screenshot whenever a test fails.
+    Saved to reports/screenshots/<testname>_<timestamp>.png
     """
     outcome = yield
     report  = outcome.get_result()
 
-    # Only act on the main test call phase that failed
     if report.when == "call" and report.failed:
         web_driver = (
             item.funcargs.get("logged_in_driver")
@@ -116,4 +91,5 @@ def pytest_runtest_makereport(item, call):
             safe_name = item.name.replace("[", "_").replace("]", "")
             path      = f"reports/screenshots/{safe_name}_{ts}.png"
             web_driver.save_screenshot(path)
-            logger.error("FAILED  %s  →  screenshot: %s", item.name, path)
+            # No arrow symbol here - plain ASCII only in log messages
+            logger.error("FAILED  %s  -> screenshot: %s", item.name, path)
