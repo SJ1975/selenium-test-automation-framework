@@ -156,6 +156,12 @@ The framework generates detailed HTML reports using pytest-html.
 
 ![Test Report](assets/report.png)
 
+**Summary:**
+- Total Tests: 17  
+- Passed: 17  
+- Failed: 0  
+- Execution Time: ~4 minutes
+
 ## ✅ Test Coverage
 
 | Module | Test ID | Scenario | Type |
