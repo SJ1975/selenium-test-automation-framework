@@ -283,7 +283,7 @@ on:
 
 ## 👤 Author
 
-Built as a portfolio project demonstrating professional QA automation engineering skills.
+Built as a portfolio project demonstrating QA automation engineering skills.
 
 **Skills demonstrated:**
 - Selenium WebDriver 4.x
