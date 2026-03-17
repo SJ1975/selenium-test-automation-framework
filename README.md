@@ -1,6 +1,8 @@
 # 🧪 Selenium Automation Testing Framework
 
-[![Selenium Test Suite](https://github.com/SJ1975/selenium-test-automation-framework/actions/workflows/test.yml/badge.svg)](https://github.com/SJ1975/selenium-test-automation-framework/actions/workflows/test.yml)
+![CI - Test Suite](https://github.com/SJ1975/selenium-test-automation-framework/actions/workflows/test.yml/badge.svg)
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![Selenium](https://img.shields.io/badge/Selenium-Automation-green)
 
 A professional-grade web application test automation framework built with
 **Python · Selenium WebDriver · PyTest · Page Object Model**.
